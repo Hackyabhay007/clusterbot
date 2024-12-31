@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cluster Protocol</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0D0D1A;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .loader-container {
+            background: linear-gradient(135deg, #0D0D1A 0%, #1A1A2E 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+        }
+
+        .robot-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin-bottom: 30px;
+        }
+
+        .robot-head {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #4A90E2, #6B7DFF);
+            border-radius: 50%;
+            position: relative;
+            margin: 0 auto;
+            box-shadow: 0 0 30px rgba(107, 125, 255, 0.5);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .robot-eye {
+            width: 15px;
+            height: 15px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 25px;
+            box-shadow: 0 0 10px #fff;
+            animation: blink 3s infinite;
+        }
+
+        .robot-eye.left { left: 20px; }
+        .robot-eye.right { right: 20px; }
+
+        .robot-antenna {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 15px;
+            background: #6B7DFF;
+            border-radius: 4px;
+        }
+
+        .robot-antenna::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: #4A90E2;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .title {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 20px 0;
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        .title-gradient {
+            background: linear-gradient(45deg, #4A90E2, #6B7DFF, #4A90E2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: textShine 3s linear infinite;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #8A8A8A;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .cyber-circle {
+            position: absolute;
+            border: 2px solid rgba(107, 125, 255, 0.3);
+            border-radius: 50%;
+            animation: expand 2s infinite;
+        }
+
+        .cyber-circle:nth-child(1) {
+            width: 100%;
+            height: 100%;
+            animation-delay: 0s;
+        }
+
+        .cyber-circle:nth-child(2) {
+            width: 80%;
+            height: 80%;
+            animation-delay: 0.3s;
+        }
+
+        .cyber-circle:nth-child(3) {
+            width: 60%;
+            height: 60%;
+            animation-delay: 0.6s;
+        }
+
+        @keyframes expand {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes blink {
+            0%, 90%, 100% { transform: scale(1); opacity: 1; }
+            95% { transform: scale(0.1); opacity: 0; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes textShine {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        .iframe-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            display: none;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .status-text {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9em;
+            color: #4A90E2;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.8;
+            animation: fadeInOut 2s infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        .fade-out {
+            animation: fadeOut 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; visibility: hidden; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loader -->
+    <div class="loader-container" id="loader">
+        <div class="robot-container">
+            <div class="cyber-circle"></div>
+            <div class="cyber-circle"></div>
+            <div class="cyber-circle"></div>
+            <div class="robot-head">
+                <div class="robot-antenna"></div>
+                <div class="robot-eye left"></div>
+                <div class="robot-eye right"></div>
+            </div>
+        </div>
+        <h1 class="title">
+            <span class="title-gradient">CLUBOT</span>
+        </h1>
+        <p class="subtitle">Your Cluster Protocol Sidekick</p>
+        <div class="status-text">Initializing Protocol...</div>
+    </div>
+
+    <!-- iframe container -->
+    <div class="iframe-container" id="iframeContainer">
+        <iframe 
+            id="clusterIframe"
+            src="https://clusterprotocol.web.app"
+            allow="camera *; microphone *; clipboard-write"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+            loading="lazy"
+        ></iframe>
+    </div>
+
+    <script>
+        // Safe Telegram WebApp initialization
+        function initTelegramWebApp() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+            }
+        }
+
+        // Load Telegram WebApp script dynamically
+        const script = document.createElement('script');
+        script.src = 'https://telegram.org/js/telegram-web-app.js';
+        script.onload = initTelegramWebApp;
+        document.head.appendChild(script);
+
+        function showMainContent() {
+            const loader = document.getElementById('loader');
+            const iframeContainer = document.getElementById('iframeContainer');
+            
+            loader.classList.add('fade-out');
+            
+            setTimeout(() => {
+                loader.style.display = 'none';
+                iframeContainer.style.display = 'block';
+            }, 800);
+        }
+
+        document.getElementById('clusterIframe').addEventListener('load', function() {
+            setTimeout(showMainContent, 3000);
+        });
+
+        // Error handling
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IFRAME') {
+                console.error('Iframe loading error:', e);
+            }
+        }, true);
+
+        // Viewport height adjustment
+        function setViewportHeight() {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+
+        setViewportHeight();
+        window.addEventListener('resize', setViewportHeight);
+    </script>
+</body>
+</html>
