@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="frame-src *;">
     <title>Cluster Protocol</title>
     <style>
         * {
@@ -141,6 +142,42 @@
             animation-delay: 0.6s;
         }
 
+        .iframe-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            display: none;
+            z-index: 1;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #0D0D1A;
+        }
+
+        .iframe-container.visible {
+            display: block !important;
+        }
+
+        .status-text {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9em;
+            color: #4A90E2;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.8;
+            animation: fadeInOut 2s infinite;
+            white-space: nowrap;
+        }
+
         @keyframes expand {
             0% {
                 transform: scale(0.8);
@@ -172,47 +209,18 @@
             100% { background-position: 200% 50%; }
         }
 
-        .iframe-container {
-            width: 100%;
-            height: 100vh;
-            position: relative;
-            display: none;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .status-text {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.9em;
-            color: #4A90E2;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.8;
-            animation: fadeInOut 2s infinite;
-        }
-
         @keyframes fadeInOut {
             0%, 100% { opacity: 0.4; }
             50% { opacity: 1; }
         }
 
-        .fade-out {
-            animation: fadeOut 0.8s ease-out forwards;
-        }
-
         @keyframes fadeOut {
             from { opacity: 1; }
             to { opacity: 0; visibility: hidden; }
+        }
+
+        .fade-out {
+            animation: fadeOut 0.8s ease-out forwards;
         }
     </style>
 </head>
@@ -233,58 +241,107 @@
             <span class="title-gradient">CLUBOT</span>
         </h1>
         <p class="subtitle">Your Cluster Protocol Sidekick</p>
-        <div class="status-text">Initializing Protocol...</div>
+        <div class="status-text" id="statusText">Initializing Protocol...</div>
     </div>
 
     <!-- iframe container -->
     <div class="iframe-container" id="iframeContainer">
         <iframe 
             id="clusterIframe"
-            src="https://clusterprotocol.web.app"
+            src=""
             allow="camera *; microphone *; clipboard-write"
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-            loading="lazy"
         ></iframe>
     </div>
 
     <script>
-        // Safe Telegram WebApp initialization
-        function initTelegramWebApp() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.ready();
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
+        
+        const statusText = document.getElementById('statusText');
+        const loader = document.getElementById('loader');
+        const iframeContainer = document.getElementById('iframeContainer');
+        const iframe = document.getElementById('clusterIframe');
+
+        function updateStatus(message) {
+            if (statusText) {
+                statusText.textContent = message;
             }
+            console.log(message);
         }
 
-        // Load Telegram WebApp script dynamically
-        const script = document.createElement('script');
-        script.src = 'https://telegram.org/js/telegram-web-app.js';
-        script.onload = initTelegramWebApp;
-        document.head.appendChild(script);
+        function initTelegramWebApp() {
+            return new Promise((resolve) => {
+                updateStatus('Initializing Telegram...');
+                const script = document.createElement('script');
+                script.src = 'https://telegram.org/js/telegram-web-app.js';
+                script.onload = () => {
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        window.Telegram.WebApp.ready();
+                        updateStatus('Telegram initialized');
+                    }
+                    resolve();
+                };
+                document.head.appendChild(script);
+            });
+        }
 
         function showMainContent() {
-            const loader = document.getElementById('loader');
-            const iframeContainer = document.getElementById('iframeContainer');
-            
+            updateStatus('Loading complete');
             loader.classList.add('fade-out');
-            
             setTimeout(() => {
                 loader.style.display = 'none';
-                iframeContainer.style.display = 'block';
+                iframeContainer.classList.add('visible');
             }, 800);
         }
 
-        document.getElementById('clusterIframe').addEventListener('load', function() {
-            setTimeout(showMainContent, 3000);
-        });
+        function loadIframeContent() {
+            return new Promise((resolve, reject) => {
+                updateStatus('Loading application...');
+                
+                iframe.src = 'https://clusterprotocol.web.app';
 
-        // Error handling
-        window.addEventListener('error', function(e) {
-            if (e.target.tagName === 'IFRAME') {
-                console.error('Iframe loading error:', e);
+                iframe.onload = () => {
+                    updateStatus('Application loaded');
+                    resolve();
+                };
+
+                iframe.onerror = (error) => {
+                    reject(error);
+                };
+
+                // Timeout after 15 seconds
+                setTimeout(() => {
+                    reject(new Error('Loading timeout'));
+                }, 15000);
+            });
+        }
+
+        async function initialize() {
+            try {
+                if (retryCount >= MAX_RETRIES) {
+                    updateStatus('Failed to load after multiple attempts');
+                    return;
+                }
+
+                await initTelegramWebApp();
+                await loadIframeContent();
+                showMainContent();
+                
+            } catch (error) {
+                console.error('Loading error:', error);
+                retryCount++;
+                updateStatus(`Error loading (Attempt ${retryCount}/${MAX_RETRIES}). Retrying...`);
+                
+                // Retry after 2 seconds
+                setTimeout(initialize, 2000);
             }
-        }, true);
+        }
 
-        // Viewport height adjustment
+        // Start initialization
+        initialize();
+
+        // Handle viewport height
         function setViewportHeight() {
             let vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -292,6 +349,15 @@
 
         setViewportHeight();
         window.addEventListener('resize', setViewportHeight);
+
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IFRAME') {
+                console.error('Iframe error:', e);
+                updateStatus('Frame error. Retrying...');
+                setTimeout(initialize, 2000);
+            }
+        }, true);
     </script>
 </body>
 </html>
